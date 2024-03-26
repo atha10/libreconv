@@ -19,8 +19,8 @@ module Libreconv
   # @raise [URI::Error]             When URI parsing error.
   # @raise [Net::ProtocolError]     If source URL checking failed.
   # @raise [ConversionFailedError]  When soffice command execution error.
-  def self.convert(source, target, soffice_command = nil, convert_to = nil)
-    Converter.new(source, target, soffice_command, convert_to).convert
+  def self.convert(source, target, soffice_command = nil, convert_to = nil,filter = nil)
+    Converter.new(source, target, soffice_command, convert_to,filter).convert
   end
 
   class Converter
@@ -34,12 +34,13 @@ module Libreconv
     # @raise [IOError]                If invalid source file/URL or soffice command not found.
     # @raise [URI::Error]             When URI parsing error.
     # @raise [Net::ProtocolError]     If source URL checking failed.
-    def initialize(source, target, soffice_command = nil, convert_to = nil)
+    def initialize(source, target, soffice_command = nil, convert_to = nil,filter = nil)
       @source = check_source_type(source)
       @target = target
       @soffice_command = soffice_command || which('soffice') || which('soffice.bin')
       @convert_to = convert_to || 'pdf'
-
+      @infilter = filter
+      
       ensure_soffice_exists
     end
 
@@ -92,6 +93,7 @@ module Libreconv
         "--accept=\"pipe,name=#{File.basename(tmp_pipe_path)};url;StarOffice.ServiceManager\"",
         "-env:UserInstallation=#{build_file_uri(tmp_pipe_path)}",
         '--headless',
+        check_filter, #Add extra infilter
         '--convert-to', @convert_to,
         escaped_source,
         '--outdir', target_path
@@ -104,6 +106,12 @@ module Libreconv
     def escaped_source
       # TODO: @source.is_a?(URI::Generic) ? "'#{@source}'" : @source
       @source.to_s
+    end
+
+    #If filter is nil/not provided return empty string.else return with --infilter param
+    def check_filter
+      return "--infilter=#{@infilter}" if @infilter 
+      return ""
     end
 
     # @return [String]
